@@ -12,7 +12,7 @@ class AirSimUAVEnv:
         self.client.enableApiControl(True)
         self.client.armDisarm(True)
 
-        self.action_duration = 1
+        self.action_duration = 0.5
         self.max_episode_steps = 500
         self.goal_radius = 2.0
         self.step_count = 0
@@ -23,6 +23,7 @@ class AirSimUAVEnv:
         self.client.armDisarm(True)
         self.client.takeoffAsync().join()
         time.sleep(0.5)
+        self.client.moveToZAsync(-10, velocity=2).join()
 
         # 🎯 设置目标点：65米半径圆周上随机选点
         theta = random.uniform(0, 2 * np.pi)
@@ -42,6 +43,8 @@ class AirSimUAVEnv:
             drivetrain=airsim.DrivetrainType.MaxDegreeOfFreedom,
             yaw_mode=airsim.YawMode(is_rate=True, yaw_or_rate=yaw_rate)
         ).join()
+
+        self.client.moveToZAsync(-10, velocity=5).join()
 
         next_obs = self._get_obs()
         reward, done = self._compute_reward()
@@ -74,14 +77,15 @@ class AirSimUAVEnv:
         return depth, obs_vector
 
     def _compute_reward(self):
-        curr_dist = self._compute_distance_to_goal()
+        current_pos = self._get_position()
+        curr_dist = np.linalg.norm(current_pos - self.goal_pos)
         re = (self.prev_distance - curr_dist) / 65.0  # normalize
 
-        reward = np.clip(re * 5.0, -1, 1)
+        reward = 5.0 * re
         done = False
 
         # 成功到达
-        if curr_dist < self.goal_radius:
+        if curr_dist < 2:
             reward += 10
             done = True
 

@@ -1,40 +1,31 @@
-# models/critic.py
-
-import torch
+from models.cnn import CNNEncoder
 import torch.nn as nn
-import torch.nn.functional as F
+
 
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
         super().__init__()
+        self.cnn = CNNEncoder(output_dim=25)
+        total_input = 25 + state_dim + action_dim
 
-        # Critic 1
-        self.l1 = nn.Linear(state_dim + action_dim, 128)
-        self.l2 = nn.Linear(128, 128)
-        self.l3 = nn.Linear(128, 1)
+        self.q1 = nn.Sequential(
+            nn.Linear(total_input, 128), nn.ReLU(),
+            nn.Linear(128, 128), nn.ReLU(),
+            nn.Linear(128, 1)
+        )
 
-        # Critic 2
-        self.l4 = nn.Linear(state_dim + action_dim, 128)
-        self.l5 = nn.Linear(128, 128)
-        self.l6 = nn.Linear(128, 1)
+        self.q2 = nn.Sequential(
+            nn.Linear(total_input, 128), nn.ReLU(),
+            nn.Linear(128, 128), nn.ReLU(),
+            nn.Linear(128, 1)
+        )
 
-    def forward(self, state, action):
-        sa = torch.cat([state, action], dim=1)
+    def forward(self, depth, state, action):
+        feat = self.cnn(depth)
+        x = torch.cat([feat, state, action], dim=1)
+        return self.q1(x), self.q2(x)
 
-        q1 = F.relu(self.l1(sa))
-        q1 = F.relu(self.l2(q1))
-        q1 = self.l3(q1)
-
-        q2 = F.relu(self.l4(sa))
-        q2 = F.relu(self.l5(q2))
-        q2 = self.l6(q2)
-
-        return q1, q2
-
-    def Q1(self, state, action):
-        sa = torch.cat([state, action], dim=1)
-
-        q1 = F.relu(self.l1(sa))
-        q1 = F.relu(self.l2(q1))
-        q1 = self.l3(q1)
-        return q1
+    def Q1(self, depth, state, action):
+        feat = self.cnn(depth)
+        x = torch.cat([feat, state, action], dim=1)
+        return self.q1(x)
