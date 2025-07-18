@@ -1,4 +1,5 @@
 from models.cnn import CNNEncoder
+import torch
 import torch.nn as nn
 
 

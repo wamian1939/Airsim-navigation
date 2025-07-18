@@ -3,18 +3,23 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from models.cnn import CNNEncoder
 
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, max_action):
         super().__init__()
-        self.l1 = nn.Linear(state_dim, 128)
-        self.l2 = nn.Linear(128, 128)
-        self.l3 = nn.Linear(128, action_dim)
-
+        self.cnn = CNNEncoder(output_dim=25)
+        self.fc = nn.Sequential(
+            nn.Linear(25 + state_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, action_dim),
+            nn.Tanh()
+        )
         self.max_action = max_action
 
-    def forward(self, state):
-        a = F.relu(self.l1(state))
-        a = F.relu(self.l2(a))
-        a = torch.tanh(self.l3(a))  # 输出范围 [-1, 1]
-        return a * self.max_action  # 缩放到实际动作范围
+    def forward(self, depth, state):  # ✅ 必须接受两个输入
+        feat = self.cnn(depth)
+        x = torch.cat([feat, state], dim=1)
+        return self.fc(x) * self.max_action

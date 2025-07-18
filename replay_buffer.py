@@ -1,5 +1,3 @@
-# replay_buffer.py
-
 import numpy as np
 import random
 
@@ -15,14 +13,20 @@ class ReplayBuffer:
         self.next_state = np.zeros((max_size, state_dim), dtype=np.float32)
         self.done = np.zeros((max_size, 1), dtype=np.float32)
 
-    def add(self, state, action, reward, next_state, done):
-        i = self.ptr
+        # ✅ 新增 depth 图缓存区（默认大小：80x100）
+        self.depth = np.zeros((max_size, 1, 256, 144), dtype=np.float32)
+        self.next_depth = np.zeros((max_size, 1, 256, 144), dtype=np.float32)
 
+    def add(self, state, action, reward, next_state, done, depth, next_depth):
+        i = self.ptr
         self.state[i] = state
         self.action[i] = action
         self.reward[i] = reward
         self.next_state[i] = next_state
         self.done[i] = float(done)
+
+        self.depth[i] = depth    # shape: [1, 80, 100]
+        self.next_depth[i] = next_depth
 
         self.ptr = (self.ptr + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
@@ -35,4 +39,6 @@ class ReplayBuffer:
             self.reward[ind],
             self.next_state[ind],
             self.done[ind],
+            self.depth[ind],
+            self.next_depth[ind],
         )
